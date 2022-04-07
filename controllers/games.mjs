@@ -113,10 +113,20 @@ export default function initGamesController(db) {
     const cardDeck = shuffleCards(makeDeck());
     const playerHand = [cardDeck.pop(), cardDeck.pop()];
 
+    console.log('playerHand[1].rank :>> ', playerHand[1].rank);
+
+    let previousHighCard;
+    if (playerHand[0].rank >= playerHand[1].rank) {
+      previousHighCard = playerHand[0];
+    } else previousHighCard = playerHand[1];
+
+    console.log('previousHighCard :>> ', previousHighCard);
+
     const newGame = {
       gameState: {
         cardDeck,
         playerHand,
+        previousHighCard,
       },
     };
 
@@ -144,11 +154,29 @@ export default function initGamesController(db) {
       // make changes to the object
       const playerHand = [game.gameState.cardDeck.pop(), game.gameState.cardDeck.pop()];
 
+      console.log('playerHand[1].rank :>> ', playerHand[1].rank);
+      /** get the high card from current hand and store it for comparison with next deal */
+      let previousHighCard;
+      if (playerHand[0].rank >= playerHand[1].rank) {
+        previousHighCard = playerHand[0];
+      } else previousHighCard = playerHand[1];
+
+      console.log('previousHighCard :>> ', previousHighCard);
+
+      /* compare the high card from this hand with the previous */
+      let result;
+      if (game.gameState.previousHighCard.rank < previousHighCard.rank) {
+        result = 'This round have higher card.';
+      } else if (game.gameState.previousHighCard > previousHighCard.rank) {
+        result = 'Previous round have higher card.';
+      } else result = 'Both rounds have the same high card ranks';
+
       // update the game with the new info
       await game.update({
         gameState: {
           cardDeck: game.gameState.cardDeck,
           playerHand,
+          previousHighCard,
         },
 
       });
@@ -158,6 +186,7 @@ export default function initGamesController(db) {
       response.send({
         id: game.id,
         playerHand: game.gameState.playerHand,
+        result,
       });
     } catch (error) {
       response.status(500).send(error);

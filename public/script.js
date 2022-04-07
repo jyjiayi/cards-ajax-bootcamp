@@ -5,7 +5,7 @@ let currentGame = null;
 const createGameBtn = document.createElement('button');
 
 // DOM manipulation function that displays the player's current hand.
-const runGame = function ({ playerHand }) {
+const runGame = function ({ playerHand, result }) {
   // manipulate DOM
   const gameContainer = document.querySelector('#game-container');
 
@@ -19,6 +19,8 @@ const runGame = function ({ playerHand }) {
     ${playerHand[1].name}
     of
     ${playerHand[1].suit}
+
+    RESULT: ${result}.
   `;
 };
 
