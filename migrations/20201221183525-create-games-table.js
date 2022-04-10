@@ -23,9 +23,69 @@ module.exports = {
         type: Sequelize.DATE,
       },
     });
+
+    await queryInterface.createTable('users', {
+      id: {
+        allowNull: false,
+        autoIncrement: true,
+        primaryKey: true,
+        type: Sequelize.INTEGER,
+      },
+      email: {
+        allowNull: false,
+        type: Sequelize.TEXT,
+      },
+      password: {
+        allowNull: false,
+        type: Sequelize.TEXT,
+      },
+      created_at: {
+        allowNull: false,
+        type: Sequelize.DATE,
+      },
+      updated_at: {
+        allowNull: false,
+        type: Sequelize.DATE,
+      },
+    });
+
+    await queryInterface.createTable('gamesusers', {
+      id: {
+        allowNull: false,
+        autoIncrement: true,
+        primaryKey: true,
+        type: Sequelize.INTEGER,
+      },
+      game_id: {
+        allowNull: false,
+        type: Sequelize.INTEGER,
+        references: {
+          model: 'games',
+          key: 'id',
+        },
+      },
+      user_id: {
+        allowNull: false,
+        type: Sequelize.INTEGER,
+        references: {
+          model: 'users',
+          key: 'id',
+        },
+      },
+      created_at: {
+        allowNull: false,
+        type: Sequelize.DATE,
+      },
+      updated_at: {
+        allowNull: false,
+        type: Sequelize.DATE,
+      },
+    });
   },
 
   down: async (queryInterface) => {
+    await queryInterface.dropTable('gamesusers');
+    await queryInterface.dropTable('users');
     await queryInterface.dropTable('games');
   },
 };

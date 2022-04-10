@@ -111,22 +111,20 @@ export default function initGamesController(db) {
   const create = async (request, response) => {
     // deal out a new shuffled deck for this game.
     const cardDeck = shuffleCards(makeDeck());
-    const playerHand = [cardDeck.pop(), cardDeck.pop()];
+    const player1Hand = [cardDeck.pop(), cardDeck.pop()];
+    const player2Hand = [cardDeck.pop(), cardDeck.pop()];
 
-    console.log('playerHand[1].rank :>> ', playerHand[1].rank);
-
-    let previousHighCard;
-    if (playerHand[0].rank >= playerHand[1].rank) {
-      previousHighCard = playerHand[0];
-    } else previousHighCard = playerHand[1];
-
-    console.log('previousHighCard :>> ', previousHighCard);
+    // let previousHighCard;
+    // if (playerHand[0].rank >= playerHand[1].rank) {
+    //   previousHighCard = playerHand[0];
+    // } else previousHighCard = playerHand[1];
 
     const newGame = {
       gameState: {
         cardDeck,
-        playerHand,
-        previousHighCard,
+        player1Hand,
+        player2Hand,
+        // previousHighCard,
       },
     };
 
@@ -134,14 +132,30 @@ export default function initGamesController(db) {
       // run the DB INSERT query
       const game = await db.Game.create(newGame);
 
+      const player1 = await db.User.findOne({
+        where: {
+          id: Number(request.cookies.userId),
+        },
+      });
+
+      const player2 = await db.User.findOne({
+        where: {
+          id: request.body.player2id,
+        },
+      });
+      // insert into the join table
+      await game.addUser(player1);
+      await game.addUser(player2);
+
       // send the new game back to the user.
       // dont include the deck so the user can't cheat
       response.send({
         id: game.id,
-        playerHand: game.gameState.playerHand,
+        player1Hand: game.gameState.player1Hand,
+        player2Hand: game.gameState.player2Hand,
       });
     } catch (error) {
-      response.status(500).send(error);
+      console.log(error);
     }
   };
 
@@ -152,31 +166,52 @@ export default function initGamesController(db) {
       const game = await db.Game.findByPk(request.params.id);
 
       // make changes to the object
-      const playerHand = [game.gameState.cardDeck.pop(), game.gameState.cardDeck.pop()];
+      const player1Hand = [game.gameState.cardDeck.pop(), game.gameState.cardDeck.pop()];
+      const player2Hand = [game.gameState.cardDeck.pop(), game.gameState.cardDeck.pop()];
 
-      console.log('playerHand[1].rank :>> ', playerHand[1].rank);
-      /** get the high card from current hand and store it for comparison with next deal */
-      let previousHighCard;
-      if (playerHand[0].rank >= playerHand[1].rank) {
-        previousHighCard = playerHand[0];
-      } else previousHighCard = playerHand[1];
+      /** get the high card from each player hand and store it for comparison */
+      let player1HighCard;
+      if (player1Hand[0].rank >= player1Hand[1].rank) {
+        player1HighCard = player1Hand[0];
+      } else player1HighCard = player1Hand[1];
 
-      console.log('previousHighCard :>> ', previousHighCard);
+      let player2HighCard;
+      if (player2Hand[0].rank >= player2Hand[1].rank) {
+        player2HighCard = player2Hand[0];
+      } else player2HighCard = player2Hand[1];
 
-      /* compare the high card from this hand with the previous */
-      let result;
-      if (game.gameState.previousHighCard.rank < previousHighCard.rank) {
-        result = 'This round have higher card.';
-      } else if (game.gameState.previousHighCard > previousHighCard.rank) {
-        result = 'Previous round have higher card.';
-      } else result = 'Both rounds have the same high card ranks';
+      // compare the two high cards and determine the result
+      let winner;
+
+      if (player1HighCard.rank < player2HighCard.rank) {
+        winner = 'Random Player';
+      } else if (player1HighCard.rank > player2HighCard.rank) {
+        winner = 'User';
+      } else winner = 'Tie';
+
+      // console.log('playerHand[1].rank :>> ', playerHand[1].rank);
+      // /** get the high card from current hand and store it for comparison with next deal */
+      // let previousHighCard;
+      // if (playerHand[0].rank >= playerHand[1].rank) {
+      //   previousHighCard = playerHand[0];
+      // } else previousHighCard = playerHand[1];
+
+      // console.log('previousHighCard :>> ', previousHighCard);
+
+      // /* compare the high card from this hand with the previous */
+      // let result;
+      // if (game.gameState.previousHighCard.rank < previousHighCard.rank) {
+      //   result = 'This round have higher card.';
+      // } else if (game.gameState.previousHighCard > previousHighCard.rank) {
+      //   result = 'Previous round have higher card.';
+      // } else result = 'Both rounds have the same high card ranks';
 
       // update the game with the new info
       await game.update({
         gameState: {
           cardDeck: game.gameState.cardDeck,
-          playerHand,
-          previousHighCard,
+          player1Hand,
+          player2Hand,
         },
 
       });
@@ -185,11 +220,32 @@ export default function initGamesController(db) {
       // dont include the deck so the user can't cheat
       response.send({
         id: game.id,
-        playerHand: game.gameState.playerHand,
-        result,
+        player1Hand: game.gameState.player1Hand,
+        player2Hand: game.gameState.player2Hand,
+        winner,
       });
     } catch (error) {
-      response.status(500).send(error);
+      console.log(error);
+    }
+  };
+
+  // retrieve the current game
+  const findGame = async (req, res) => {
+    try {
+      const currentGame = await db.Game.findOne({
+        where: {
+          id: req.body.gameId,
+        },
+      });
+
+      res.send({
+        id: currentGame.id,
+        player1Hand: currentGame.gameState.player1Hand,
+        player2Hand: currentGame.gameState.player2Hand,
+      });
+    }
+    catch (error) {
+      console.log(error);
     }
   };
 
@@ -199,5 +255,6 @@ export default function initGamesController(db) {
     deal,
     create,
     index,
+    findGame,
   };
 }
